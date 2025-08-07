@@ -1,21 +1,37 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, Db } from "mongodb";
 
-const uri = process.env.MONGODB_URI || "mongodb://localhost:27017";
+const uri = process.env.MONGODB_URI;
 const dbName = process.env.DB_NAME || "order_management";
 
-let client: MongoClient;
-let db: any;
+if (!uri) {
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
+}
 
-export async function connectDB() {
+let client: MongoClient;
+let db: Db;
+
+export async function connectDB(): Promise<Db> {
   if (!client) {
-    client = new MongoClient(uri);
-    await client.connect();
-    db = client.db(dbName);
-    console.log("MongoDB connected");
+    if (!uri) {
+      throw new Error("MONGODB_URI environment variable is not defined");
+    }
+    
+    try {
+      client = new MongoClient(uri);
+      await client.connect();
+      db = client.db(dbName);
+      console.log("MongoDB connected successfully");
+    } catch (error) {
+      console.error("MongoDB connection error:", error);
+      throw new Error("Failed to connect to MongoDB");
+    }
   }
   return db;
 }
 
-export function getDB() {
+export function getDB(): Db {
+  if (!db) {
+    throw new Error("Database not connected. Call connectDB() first.");
+  }
   return db;
 }
