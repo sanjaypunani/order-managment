@@ -2,7 +2,10 @@
 import React, { useState } from "react";
 import { OrderFormModal } from "../dashboard/OrderFormModal";
 import { useOrderForm } from "../dashboard/useOrderForm";
-import { generateInvoicePDF, getOrderSummaryText } from "../dashboard/invoiceUtils";
+import {
+  generateInvoicePDF,
+  getOrderSummaryText,
+} from "../dashboard/invoiceUtils";
 import { SOCIETIES } from "../dashboard/constants";
 
 export default function Orders() {
@@ -29,9 +32,9 @@ export default function Orders() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Order Management</h1>
-      
+
       {/* Filter Controls */}
-      <div className="flex flex-wrap gap-4 mb-6 items-center">
+      <div className="flex flex-wrap gap-4 lg:gap-6 xl:gap-8 mb-6 items-center">
         <div>
           <label className="block text-sm font-semibold mb-1">
             Delivery Date
@@ -61,7 +64,9 @@ export default function Orders() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-semibold mb-1">Discount Filter</label>
+          <label className="block text-sm font-semibold mb-1">
+            Discount Filter
+          </label>
           <select
             className="border rounded px-3 py-2"
             value={discountFilter}
@@ -99,21 +104,45 @@ export default function Orders() {
         <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-4 py-2 text-left">Customer Number</th>
-              <th className="px-4 py-2 text-left">Flat Number</th>
-              <th className="px-4 py-2 text-left">Society Name</th>
-              <th className="px-4 py-2 text-left">Items</th>
-              <th className="px-4 py-2 text-left">Delivery Date</th>
-              <th className="px-4 py-2 text-left">Actions</th>
+              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
+                Customer Name
+              </th>
+              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
+                Customer Number
+              </th>
+              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
+                Flat Number
+              </th>
+              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
+                Society Name
+              </th>
+              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
+                Items
+              </th>
+              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
+                Delivery Date
+              </th>
+              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
             {filteredByDiscount.map((order: any, idx: number) => (
               <tr key={idx} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-2">{order.customerNumber}</td>
-                <td className="px-4 py-2">{order.flatNumber}</td>
-                <td className="px-4 py-2">{order.socityName}</td>
-                <td className="px-4 py-2">
+                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 font-medium">
+                  {order.customerName || "Unnamed"}
+                </td>
+                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
+                  {order.customerNumber}
+                </td>
+                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
+                  {order.flatNumber}
+                </td>
+                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
+                  {order.socityName}
+                </td>
+                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
                   <span className="block mb-2 font-semibold">
                     Status:{" "}
                     <span
@@ -149,12 +178,12 @@ export default function Orders() {
                     ))}
                   </ul>
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
                   {order.deliveryDate
                     ? new Date(order.deliveryDate).toLocaleDateString()
                     : "-"}
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
                   <div className="flex flex-col space-y-1">
                     <button
                       className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"

@@ -15,7 +15,7 @@ export function useAnalytics() {
       const response = await fetch("/api/orders");
       if (response.ok) {
         const data = await response.json();
-        setOrderList(data);
+        setOrderList(data?.orders);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -29,11 +29,12 @@ export function useAnalytics() {
   }, []);
 
   // Filter orders based on delivery date and society name
-  const filteredOrders = orderList.filter((order: any) => {
-    const matchesDeliveryDate = !filterDeliveryDate || 
+  const filteredOrders = orderList?.filter((order: any) => {
+    const matchesDeliveryDate =
+      !filterDeliveryDate ||
       (order.deliveryDate && order.deliveryDate.includes(filterDeliveryDate));
-    const matchesSocityName = !filterSocityName || 
-      order.socityName === filterSocityName;
+    const matchesSocityName =
+      !filterSocityName || order.socityName === filterSocityName;
     return matchesDeliveryDate && matchesSocityName;
   });
 
@@ -106,7 +107,7 @@ export function useAnalytics() {
       flatsBySocity[order.socityName].push(order.flatNumber);
     }
   });
-  
+
   // Sort flats for each society
   Object.keys(flatsBySocity).forEach((socity) => {
     flatsBySocity[socity].sort((a, b) => {

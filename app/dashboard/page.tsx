@@ -1,10 +1,13 @@
 "use client";
 import React from "react";
 import { useAnalytics } from "./useAnalytics";
+// import { useProductAnalytics } from "./useProductAnalytics"; // Temporarily disabled
 import { SOCIETIES } from "./constants";
 
 export default function Dashboard() {
   const analytics = useAnalytics();
+  // const productAnalytics = useProductAnalytics(); // Temporarily disabled
+
   const {
     filterDeliveryDate,
     setFilterDeliveryDate,
@@ -33,7 +36,7 @@ export default function Dashboard() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Analytics Dashboard</h1>
-      
+
       {/* Filter Controls */}
       <div className="flex flex-wrap gap-4 mb-6 items-center">
         <div>
@@ -65,7 +68,9 @@ export default function Dashboard() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-semibold mb-1">Discount Filter</label>
+          <label className="block text-sm font-semibold mb-1">
+            Discount Filter
+          </label>
           <select
             className="border rounded px-3 py-2"
             value={discountFilter}
@@ -79,39 +84,46 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Analytics Section */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-blue-50 p-4 rounded shadow">
-          <div className="text-lg font-semibold">Total Orders</div>
-          <div className="text-2xl font-bold text-blue-700">{totalOrders}</div>
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 xl:gap-8">
+        <div className="bg-blue-50 p-4 lg:p-6 xl:p-8 rounded shadow">
+          <div className="text-lg lg:text-xl font-semibold">Total Orders</div>
+          <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-blue-700">
+            {totalOrders}
+          </div>
         </div>
-        <div className="bg-green-50 p-4 rounded shadow">
-          <div className="text-lg font-semibold">
+        <div className="bg-green-50 p-4 lg:p-6 xl:p-8 rounded shadow">
+          <div className="text-lg lg:text-xl font-semibold">
             Total Amount (No Discount)
           </div>
-          <div className="text-2xl font-bold text-green-700">
+          <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-green-700">
             ₹{totalAmountWithoutDiscount.toLocaleString()}
           </div>
         </div>
-        <div className="bg-purple-50 p-4 rounded shadow">
-          <div className="text-lg font-semibold">
+        <div className="bg-purple-50 p-4 lg:p-6 xl:p-8 rounded shadow">
+          <div className="text-lg lg:text-xl font-semibold">
             Total Amount (With Discount)
           </div>
-          <div className="text-2xl font-bold text-purple-700">
+          <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-purple-700">
             ₹{totalAmountWithDiscount.toLocaleString()}
           </div>
         </div>
-        <div className="bg-orange-50 p-4 rounded shadow">
-          <div className="text-lg font-semibold">Total Savings</div>
-          <div className="text-2xl font-bold text-orange-700">
-            ₹{(totalAmountWithoutDiscount - totalAmountWithDiscount).toLocaleString()}
+        <div className="bg-orange-50 p-4 lg:p-6 xl:p-8 rounded shadow">
+          <div className="text-lg lg:text-xl font-semibold">Total Savings</div>
+          <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-orange-700">
+            ₹
+            {(
+              totalAmountWithoutDiscount - totalAmountWithDiscount
+            ).toLocaleString()}
           </div>
         </div>
       </div>
 
       {/* Flats Grouped by Society Name */}
-      <div className="mb-6 bg-gray-50 p-4 rounded shadow">
-        <div className="text-lg font-semibold mb-2">Flats by Society Name</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mb-6 bg-gray-50 p-4 lg:p-6 xl:p-8 rounded shadow">
+        <div className="text-lg lg:text-xl font-semibold mb-2">
+          Flats by Society Name
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 xl:gap-8">
           {Object.entries(flatsBySocity).map(([socity, flats]) => (
             <div key={socity} className="bg-white rounded shadow p-3">
               <div className="font-bold text-blue-700 mb-2">{socity}</div>
@@ -168,10 +180,13 @@ export default function Dashboard() {
           <div className="max-h-64 overflow-y-auto">
             <ul className="space-y-1 text-sm">
               {groupedPackages.map((pkg) => (
-                <li key={`${pkg.name}-${pkg.quantity}-${pkg.unit}`} className="flex justify-between">
+                <li
+                  key={`${pkg.name}-${pkg.quantity}-${pkg.unit}`}
+                  className="flex justify-between"
+                >
                   <span>
-                    <span className="font-semibold">{pkg.name}</span>{" "}
-                    ({pkg.quantity} {pkg.unit})
+                    <span className="font-semibold">{pkg.name}</span> (
+                    {pkg.quantity} {pkg.unit})
                   </span>
                   <span className="text-blue-700 font-bold">
                     {pkg.count} package{pkg.count > 1 ? "s" : ""}
@@ -182,6 +197,16 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Product Analytics Section - Temporarily Disabled */}
+      {/* 
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4">Product Performance Analytics</h2>
+        <div className="text-center py-8">
+          <div className="text-lg">Product analytics coming soon...</div>
+        </div>
+      </div>
+      */}
     </div>
   );
 }

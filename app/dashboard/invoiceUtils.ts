@@ -80,7 +80,7 @@ export function getOrderSummaryText(order: any): string {
     summary += `• ${item.name} – ${item.quantity} ${item.unit} – ${item.price} RS\n`;
   });
   summary += `\nTotal Amount: ${order.totalAmount || 0} RS\n`;
-  summary += `Discount: ${order.discount || 0} RS\n\n`;
+  // summary += `Discount: ${order.discount || 0} RS\n\n`;
   summary += `**FINAL AMOUNT TO PAY: ${
     order.finalAmount === 0 ? "FREE" : order.finalAmount + " RS"
   }**\n\n`;

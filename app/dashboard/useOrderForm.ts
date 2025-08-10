@@ -9,6 +9,7 @@ export function useOrderForm() {
     customerNumber: "",
     flatNumber: "",
     socityName: "",
+    customerName: "",
     status: "Pending",
     discount: "",
     deliveryDate: "",
@@ -23,6 +24,9 @@ export function useOrderForm() {
   });
   const [filterDeliveryDate, setFilterDeliveryDate] = useState<string>("");
   const [filterSocityName, setFilterSocityName] = useState<string>("");
+  const [customerSearchLoading, setCustomerSearchLoading] = useState(false);
+  const [searchedCustomer, setSearchedCustomer] = useState<any>(null);
+  const [searchedCustomers, setSearchedCustomers] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchOrders() {
@@ -30,12 +34,13 @@ export function useOrderForm() {
       try {
         const res = await fetch("/api/orders");
         const data = await res.json();
-        if (data.success) {
+        if (data.success && Array.isArray(data.orders)) {
           setOrderList(
             data.orders.map((order: any) => ({
               customerNumber: order.customerNumber,
               flatNumber: order.flatNumber,
               socityName: order.socityName,
+              customerName: order.customerName || "",
               status: order.status,
               discount: order.discount,
               totalAmount: order.totalAmount,
@@ -50,7 +55,10 @@ export function useOrderForm() {
             }))
           );
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+        setOrderList([]); // Set to empty array on error
+      }
       setLoading(false);
     }
     fetchOrders();
@@ -59,6 +67,11 @@ export function useOrderForm() {
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
+    // Clear searched customer when mobile number is manually changed
+    if (e.target.name === "customerNumber") {
+      setSearchedCustomer(null);
+      setSearchedCustomers([]);
+    }
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -102,6 +115,7 @@ export function useOrderForm() {
           customerNumber: order.customerNumber,
           flatNumber: order.flatNumber,
           socityName: order.socityName,
+          customerName: order.customerName || "",
           status: order.status,
           discount: order.discount,
           totalAmount: order.totalAmount,
@@ -119,6 +133,7 @@ export function useOrderForm() {
       customerNumber: order.customerNumber,
       flatNumber: order.flatNumber,
       socityName: order.socityName,
+      customerName: order.customerName || "",
       status: order.status,
       discount: order.discount,
       deliveryDate: order.deliveryDate,
@@ -178,6 +193,7 @@ export function useOrderForm() {
       customerNumber: form.customerNumber,
       flatNumber: form.flatNumber,
       socityName: form.socityName,
+      customerName: form.customerName,
       status: form.status,
       discount,
       totalAmount,
@@ -189,6 +205,20 @@ export function useOrderForm() {
       order_year,
       week_of_month,
     };
+
+    // For new orders, check if customer exists and create if needed
+    if (!editOrderId) {
+      const customerExists = await fetch(
+        `/api/customers?mobileNumber=${form.customerNumber}`
+      );
+      const customerData = await customerExists.json();
+
+      if (!customerData.success || !customerData.customer) {
+        // Customer doesn't exist, create one
+        await createCustomerFromOrder(orderPayload);
+      }
+    }
+
     if (editOrderId) {
       await fetch("/api/orders", {
         method: "PUT",
@@ -207,6 +237,7 @@ export function useOrderForm() {
       customerNumber: "",
       flatNumber: "",
       socityName: "",
+      customerName: "",
       status: "Pending",
       discount: "",
       deliveryDate: "",
@@ -231,6 +262,7 @@ export function useOrderForm() {
             customerNumber: order.customerNumber,
             flatNumber: order.flatNumber,
             socityName: order.socityName,
+            customerName: order.customerName || "",
             status: order.status,
             discount: order.discount,
             totalAmount: order.totalAmount,
@@ -250,7 +282,7 @@ export function useOrderForm() {
   };
 
   // Filtered order list based on filters
-  const filteredOrders: any[] = orderList.filter((order) => {
+  const filteredOrders: any[] = (orderList || []).filter((order) => {
     const matchDate = filterDeliveryDate
       ? order.deliveryDate === filterDeliveryDate
       : true;
@@ -285,6 +317,127 @@ export function useOrderForm() {
     ).length,
   };
 
+  // Customer search functions
+  const searchCustomerByMobile = async (mobileNumber: string) => {
+    if (!mobileNumber) return;
+    setCustomerSearchLoading(true);
+    try {
+      // Extract just the mobile number part, removing country code if present
+      let cleanNumber = mobileNumber;
+      if (mobileNumber.startsWith("+91")) {
+        cleanNumber = mobileNumber.substring(3);
+      } else if (mobileNumber.startsWith("91") && mobileNumber.length > 10) {
+        cleanNumber = mobileNumber.substring(2);
+      }
+
+      const response = await fetch(
+        `/api/customers?mobileNumber=${cleanNumber}`
+      );
+      const data = await response.json();
+      if (data.success && data.customers && data.customers.length > 0) {
+        setSearchedCustomers(data.customers);
+        // Don't auto-select the first customer, wait for user to explicitly select
+        if (data.customers.length === 1) {
+          setSearchedCustomer(data.customers[0]); // For UI feedback only
+        } else {
+          setSearchedCustomer(null); // Don't auto-select when multiple customers
+        }
+        // Don't auto-populate form fields here to avoid infinite loop
+        // The OrderFormModal will handle this in its useEffect
+      } else {
+        setSearchedCustomer(null);
+        setSearchedCustomers([]);
+      }
+    } catch (error) {
+      console.error("Error searching customer:", error);
+      setSearchedCustomer(null);
+      setSearchedCustomers([]);
+    } finally {
+      setCustomerSearchLoading(false);
+    }
+  };
+
+  const searchCustomerByFlat = async (flatNumber: string) => {
+    if (!flatNumber) return;
+    setCustomerSearchLoading(true);
+    try {
+      const response = await fetch(`/api/customers?flatNumber=${flatNumber}`);
+      const data = await response.json();
+      if (data.success && data.customers && data.customers.length > 0) {
+        const customer = data.customers[0]; // Take first match
+        setSearchedCustomer(customer);
+        // Don't auto-populate form fields here to avoid infinite loop
+        // The OrderFormModal will handle this in its useEffect
+      } else {
+        setSearchedCustomer(null);
+      }
+    } catch (error) {
+      console.error("Error searching customer:", error);
+      setSearchedCustomer(null);
+    } finally {
+      setCustomerSearchLoading(false);
+    }
+  };
+
+  const createCustomerFromOrder = async (orderData: any) => {
+    try {
+      // Parse the customer number to separate country code and mobile number
+      const fullNumber = orderData.customerNumber;
+      let countryCode = "+91";
+      let mobileNumber = fullNumber;
+
+      if (fullNumber.startsWith("+91")) {
+        countryCode = "+91";
+        mobileNumber = fullNumber.substring(3);
+      } else if (fullNumber.startsWith("91") && fullNumber.length > 10) {
+        countryCode = "+91";
+        mobileNumber = fullNumber.substring(2);
+      }
+
+      const customerData = {
+        countryCode: countryCode,
+        mobileNumber: mobileNumber,
+        flatNumber: orderData.flatNumber,
+        societyName: orderData.socityName,
+        customerName: orderData.customerName || "",
+        address: `${orderData.flatNumber}, ${orderData.socityName}`,
+      };
+
+      const response = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(customerData),
+      });
+
+      const data = await response.json();
+      return data.success;
+    } catch (error) {
+      console.error("Error creating customer:", error);
+      return false;
+    }
+  };
+
+  const clearSearchedCustomer = () => {
+    setSearchedCustomer(null);
+    setSearchedCustomers([]);
+  };
+
+  const selectCustomerFromSearch = (customer: any) => {
+    setSearchedCustomer(customer);
+    setSearchedCustomers([customer]); // Keep only the selected customer in the list
+
+    // Update the form with the selected customer's mobile number
+    setForm((prevForm) => ({
+      ...prevForm,
+      customerNumber: `${customer.countryCode || "+91"}${
+        customer.mobileNumber
+      }`,
+      customerName: customer.customerName || prevForm.customerName,
+      flatNumber: customer.flatNumber || prevForm.flatNumber,
+      socityName: customer.societyName || prevForm.socityName,
+    }));
+  };
+
   return {
     showModal,
     setShowModal,
@@ -308,5 +461,13 @@ export function useOrderForm() {
     setFilterSocityName,
     filteredOrders,
     dashboardStats,
+    customerSearchLoading,
+    searchedCustomer,
+    searchedCustomers,
+    searchCustomerByMobile,
+    searchCustomerByFlat,
+    createCustomerFromOrder,
+    clearSearchedCustomer,
+    selectCustomerFromSearch,
   };
 }
