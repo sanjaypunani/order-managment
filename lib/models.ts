@@ -23,3 +23,8 @@ export function getProductCategoriesCollection() {
 export function getPriceHistoryCollection() {
   return getDB().collection("price_history");
 }
+
+// ✅ New collection for wallet transactions
+export function getWalletTransactionsCollection() {
+  return getDB().collection("walletTransactions");
+}

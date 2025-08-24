@@ -170,7 +170,7 @@ export function useOrderForm() {
         "Saturday",
       ];
       delivery_day = days[deliveryDate.getDay()];
-      order_month = deliveryDate.toLocaleString("default", { month: "long" });
+      order_month = deliveryDate?.toLocaleString("default", { month: "long" });
       order_year = deliveryDate.getFullYear().toString();
       const firstDay = new Date(
         deliveryDate.getFullYear(),
@@ -213,24 +213,52 @@ export function useOrderForm() {
       );
       const customerData = await customerExists.json();
 
-      if (!customerData.success || !customerData.customer) {
+      if (!customerData.success || !customerData.data) {
         // Customer doesn't exist, create one
         await createCustomerFromOrder(orderPayload);
       }
     }
 
     if (editOrderId) {
-      await fetch("/api/orders", {
+      const response = await fetch("/api/orders", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId: editOrderId, ...orderPayload }),
       });
+      const result = await response.json();
+
+      // Show wallet feedback for edits
+      if (result.wallet && result.wallet.walletUsed) {
+        alert(`Order updated successfully!\n${result.wallet.message}`);
+      } else if (
+        result.wallet &&
+        !result.wallet.success &&
+        result.wallet.message.includes("Insufficient")
+      ) {
+        alert(
+          `Order updated but wallet couldn't be processed:\n${result.wallet.message}`
+        );
+      }
     } else {
-      await fetch("/api/orders", {
+      const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload),
       });
+      const result = await response.json();
+
+      // Show wallet feedback for new orders
+      if (result.wallet && result.wallet.walletUsed) {
+        alert(`Order created successfully!\n${result.wallet.message}`);
+      } else if (
+        result.wallet &&
+        !result.wallet.success &&
+        result.wallet.message.includes("Insufficient")
+      ) {
+        alert(
+          `Order created but wallet couldn't be processed:\n${result.wallet.message}`
+        );
+      }
     }
     setShowModal(false);
     setForm({
@@ -334,11 +362,11 @@ export function useOrderForm() {
         `/api/customers?mobileNumber=${cleanNumber}`
       );
       const data = await response.json();
-      if (data.success && data.customers && data.customers.length > 0) {
-        setSearchedCustomers(data.customers);
+      if (data.success && data.data && data.data.length > 0) {
+        setSearchedCustomers(data.data);
         // Don't auto-select the first customer, wait for user to explicitly select
-        if (data.customers.length === 1) {
-          setSearchedCustomer(data.customers[0]); // For UI feedback only
+        if (data.data.length === 1) {
+          setSearchedCustomer(data.data[0]); // For UI feedback only
         } else {
           setSearchedCustomer(null); // Don't auto-select when multiple customers
         }
@@ -363,8 +391,8 @@ export function useOrderForm() {
     try {
       const response = await fetch(`/api/customers?flatNumber=${flatNumber}`);
       const data = await response.json();
-      if (data.success && data.customers && data.customers.length > 0) {
-        const customer = data.customers[0]; // Take first match
+      if (data.success && data.data && data.data.length > 0) {
+        const customer = data.data[0]; // Take first match
         setSearchedCustomer(customer);
         // Don't auto-populate form fields here to avoid infinite loop
         // The OrderFormModal will handle this in its useEffect

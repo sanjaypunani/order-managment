@@ -33,8 +33,9 @@ export function useAnalytics() {
     const matchesDeliveryDate =
       !filterDeliveryDate ||
       (order.deliveryDate && order.deliveryDate.includes(filterDeliveryDate));
+    const societyName = order.customer?.societyName || order.socityName;
     const matchesSocityName =
-      !filterSocityName || order.socityName === filterSocityName;
+      !filterSocityName || societyName === filterSocityName;
     return matchesDeliveryDate && matchesSocityName;
   });
 
@@ -92,19 +93,21 @@ export function useAnalytics() {
       itemPackageCount[key].count += 1;
     });
   });
-  const groupedPackages = Object.values(itemPackageCount);
+  const groupedPackages = Object.values(itemPackageCount).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 
   // Group flat numbers by society name and sort flats ascending
   const flatsBySocity: Record<string, string[]> = {};
   filteredByDiscount.forEach((order: any) => {
-    if (!flatsBySocity[order.socityName]) {
-      flatsBySocity[order.socityName] = [];
+    const societyName = order.customer?.societyName || order.socityName;
+    const flatNumber = order.customer?.flatNumber || order.flatNumber;
+
+    if (!flatsBySocity[societyName]) {
+      flatsBySocity[societyName] = [];
     }
-    if (
-      order.flatNumber &&
-      !flatsBySocity[order.socityName].includes(order.flatNumber)
-    ) {
-      flatsBySocity[order.socityName].push(order.flatNumber);
+    if (flatNumber && !flatsBySocity[societyName].includes(flatNumber)) {
+      flatsBySocity[societyName].push(flatNumber);
     }
   });
 

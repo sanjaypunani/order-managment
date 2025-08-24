@@ -39,14 +39,15 @@ export async function POST(req: NextRequest) {
       societyName,
       customerName: customerName || "",
       address: address || "",
+      walletBalance: 0,
+      walletTransactions: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     });
 
     return NextResponse.json({
       success: true,
-      customerId: result.insertedId,
-      customer: {
+      data: {
         _id: result.insertedId,
         countryCode: countryCode || "+91",
         mobileNumber,
@@ -54,6 +55,10 @@ export async function POST(req: NextRequest) {
         societyName,
         customerName: customerName || "",
         address: address || "",
+        walletBalance: 0,
+        walletTransactions: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     });
   } catch (error) {
@@ -71,6 +76,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const mobileNumber = searchParams.get("mobileNumber");
     const flatNumber = searchParams.get("flatNumber");
+    const customerName = searchParams.get("customerName");
 
     const customersCol = getCustomersCollection();
 
@@ -82,8 +88,7 @@ export async function GET(req: NextRequest) {
       if (customer) {
         return NextResponse.json({
           success: true,
-          customer: customer,
-          customers: [customer],
+          data: [customer],
         });
       }
 
@@ -98,24 +103,41 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          customer: customers.length > 0 ? customers[0] : null, // For backward compatibility
-          customers: customers,
+          data: customers,
         });
       }
 
       return NextResponse.json({
         success: true,
-        customer: null,
-        customers: [],
+        data: [],
       });
     }
 
     if (flatNumber) {
-      // Search by flat number
-      const customers = await customersCol.find({ flatNumber }).toArray();
+      // Search by flat number - partial match
+      const customers = await customersCol
+        .find({
+          flatNumber: { $regex: flatNumber, $options: "i" },
+        })
+        .limit(10)
+        .toArray();
       return NextResponse.json({
         success: true,
-        customers,
+        data: customers,
+      });
+    }
+
+    if (customerName) {
+      // Search by customer name - partial match
+      const customers = await customersCol
+        .find({
+          customerName: { $regex: customerName, $options: "i" },
+        })
+        .limit(10)
+        .toArray();
+      return NextResponse.json({
+        success: true,
+        data: customers,
       });
     }
 
@@ -124,7 +146,10 @@ export async function GET(req: NextRequest) {
       .find({})
       .sort({ createdAt: -1 })
       .toArray();
-    return NextResponse.json({ success: true, customers });
+    return NextResponse.json({
+      success: true,
+      data: customers,
+    });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(

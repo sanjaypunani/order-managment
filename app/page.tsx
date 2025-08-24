@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation";
+// Updated home page showcasing the refactored Order Management System
+import HomeShowcase from "./home-showcase";
 
 export default function Home() {
-  redirect("/dashboard");
+  return <HomeShowcase />;
 }

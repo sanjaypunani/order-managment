@@ -1,6 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { SOCIETIES } from "../dashboard/constants";
+import {
+  DataTable,
+  TableColumn,
+  TableAction,
+  DateCell,
+} from "../components/DataTable";
 
 interface Customer {
   _id: string;
@@ -10,6 +16,7 @@ interface Customer {
   societyName: string;
   customerName: string;
   address: string;
+  walletBalance?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,7 +50,7 @@ export default function Customers() {
       const response = await fetch("/api/customers");
       const data = await response.json();
       if (data.success) {
-        setCustomers(data.customers || []);
+        setCustomers(data.data || []);
       }
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -168,6 +175,78 @@ export default function Customers() {
       customer.societyName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Define table columns for customers
+  const customerColumns: TableColumn[] = [
+    {
+      key: "customerName",
+      label: "Customer Name",
+      render: (value) => (
+        <div className="font-medium">{value || "Unnamed"}</div>
+      ),
+    },
+    {
+      key: "mobile",
+      label: "Mobile Number",
+      render: (_, customer) => (
+        <div>
+          {customer.countryCode || "+91"}
+          {customer.mobileNumber}
+        </div>
+      ),
+    },
+    {
+      key: "flatNumber",
+      label: "Flat Number",
+    },
+    {
+      key: "societyName",
+      label: "Society",
+    },
+    {
+      key: "walletBalance",
+      label: "Wallet Balance",
+      render: (value) => (
+        <div className="font-medium text-green-600">₹{value || 0}</div>
+      ),
+    },
+    {
+      key: "address",
+      label: "Address",
+      className: "text-sm text-gray-600",
+    },
+    {
+      key: "createdAt",
+      label: "Created Date",
+      render: (date) => <DateCell date={date} />,
+    },
+  ];
+
+  // Define table actions for customers
+  const customerActions: TableAction[] = [
+    {
+      label: "View Details",
+      variant: "primary",
+      onClick: (customer) =>
+        window.open(`/customers/${customer._id}`, "_blank"),
+    },
+    {
+      label: "Edit",
+      variant: "secondary",
+      onClick: (customer) => handleEdit(customer),
+    },
+    {
+      label: "Orders",
+      variant: "success",
+      onClick: (customer) => fetchCustomerOrders(customer),
+      disabled: () => loadingOrders,
+    },
+    {
+      label: "Delete",
+      variant: "danger",
+      onClick: (customer) => handleDelete(customer._id),
+    },
+  ];
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -211,7 +290,7 @@ export default function Customers() {
       </div>
 
       {/* Customer Stats */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 xl:gap-8">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 xl:gap-8">
         <div className="bg-blue-50 p-4 lg:p-6 xl:p-8 rounded shadow">
           <div className="text-lg lg:text-xl font-semibold">
             Total Customers
@@ -234,94 +313,30 @@ export default function Customers() {
             {new Set(customers.map((c) => c.societyName)).size}
           </div>
         </div>
+        <div className="bg-yellow-50 p-4 lg:p-6 xl:p-8 rounded shadow">
+          <div className="text-lg lg:text-xl font-semibold">
+            Total Wallet Balance
+          </div>
+          <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-yellow-700">
+            ₹{customers.reduce((sum, c) => sum + (c.walletBalance || 0), 0)}
+          </div>
+        </div>
       </div>
 
       {/* Customers Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
-                Customer Name
-              </th>
-              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
-                Mobile Number
-              </th>
-              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
-                Flat Number
-              </th>
-              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
-                Society
-              </th>
-              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
-                Address
-              </th>
-              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
-                Created Date
-              </th>
-              <th className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-left">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCustomers.map((customer) => (
-              <tr key={customer._id} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 font-medium">
-                  {customer.customerName || "Unnamed"}
-                </td>
-                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
-                  {customer.countryCode || "+91"}
-                  {customer.mobileNumber}
-                </td>
-                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
-                  {customer.flatNumber}
-                </td>
-                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
-                  {customer.societyName}
-                </td>
-                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-sm text-gray-600">
-                  {customer.address}
-                </td>
-                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4 text-sm">
-                  {new Date(customer.createdAt).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-2 lg:px-6 lg:py-3 xl:px-8 xl:py-4">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(customer)}
-                      className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => fetchCustomerOrders(customer)}
-                      disabled={loadingOrders}
-                      className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600 disabled:opacity-50"
-                    >
-                      {loadingOrders ? "..." : "Orders"}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(customer._id)}
-                      className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {filteredCustomers.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          {searchQuery
+      <DataTable
+        data={filteredCustomers}
+        columns={customerColumns}
+        actions={customerActions}
+        loading={loading}
+        title={`Customers (${filteredCustomers.length} total)`}
+        emptyMessage={
+          searchQuery
             ? "No customers found matching your search."
-            : "No customers found."}
-        </div>
-      )}
+            : "No customers found."
+        }
+        getRowId={(customer) => customer._id}
+      />
 
       {/* Customer Modal */}
       {showModal && (
@@ -520,9 +535,9 @@ export default function Customers() {
                   {customerOrders.map((order: any, idx: number) => (
                     <tr key={idx} className="border-t hover:bg-gray-50">
                       <td className="px-3 py-2 text-sm">
-                        {new Date(
-                          order._id.getTimestamp()
-                        ).toLocaleDateString()}
+                        {order.createdAt
+                          ? new Date(order.createdAt).toLocaleDateString()
+                          : "N/A"}
                       </td>
                       <td className="px-3 py-2 text-sm">
                         {order.deliveryDate

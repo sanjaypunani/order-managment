@@ -11,6 +11,13 @@ import AddProductModal from "./components/AddProductModal";
 import EditProductModal from "./components/EditProductModal";
 import BulkActions from "./components/BulkActions";
 import ImportExport from "./components/ImportExport";
+import {
+  DataTable,
+  TableColumn,
+  TableAction,
+  StatusBadge,
+  CurrencyCell,
+} from "../components/DataTable";
 
 interface ProductsResponse {
   success: boolean;
@@ -163,6 +170,60 @@ export default function ProductsPage() {
     }
   };
 
+  // Define table columns for products
+  const productColumns: TableColumn[] = [
+    {
+      key: "name",
+      label: "Product",
+      render: (_, product) => (
+        <div>
+          <div className="text-sm font-medium text-gray-900">
+            {product.name}
+          </div>
+          <div className="text-sm text-gray-500">{product.nameEnglish}</div>
+        </div>
+      ),
+    },
+    {
+      key: "price",
+      label: "Price",
+      render: (price) => <CurrencyCell amount={price} />,
+    },
+    {
+      key: "unit",
+      label: "Unit",
+    },
+    {
+      key: "category",
+      label: "Category",
+    },
+    {
+      key: "isActive",
+      label: "Status",
+      render: (isActive) => (
+        <StatusBadge
+          status={isActive ? "Active" : "Inactive"}
+          variant={isActive ? "success" : "danger"}
+        />
+      ),
+    },
+  ];
+
+  // Define table actions for products
+  const productActions: TableAction[] = [
+    {
+      label: "Toggle Status",
+      variant: "secondary",
+      onClick: (product: any) =>
+        toggleProductStatus(product._id!, product.isActive),
+    },
+    {
+      label: "Edit",
+      variant: "primary",
+      onClick: (product: any) => handleEditProduct(product),
+    },
+  ];
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
@@ -304,119 +365,22 @@ export default function ProductsPage() {
       />
 
       {/* Products Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Products ({total} total)</h2>
-        </div>
+      <DataTable
+        data={products}
+        columns={productColumns}
+        actions={productActions}
+        loading={loading}
+        title={`Products (${total} total)`}
+        emptyMessage="No products found"
+        selectable={true}
+        selectedItems={selectedProducts}
+        onSelectionChange={setSelectedProducts}
+        getRowId={(product) => product._id!}
+      />
 
-        {loading ? (
-          <div className="p-8 text-center">Loading products...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <input
-                      type="checkbox"
-                      checked={
-                        selectedProducts.length === products.length &&
-                        products.length > 0
-                      }
-                      onChange={handleSelectAll}
-                      className="rounded"
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Unit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => (
-                  <tr key={product._id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedProducts.includes(product._id!)}
-                        onChange={() => handleSelectProduct(product._id!)}
-                        className="rounded"
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {product.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {product.nameEnglish}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ₹{product.price}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {product.unit}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {product.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          product.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {product.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() =>
-                          toggleProductStatus(product._id!, product.isActive)
-                        }
-                        className={`mr-2 px-3 py-1 rounded text-xs ${
-                          product.isActive
-                            ? "bg-red-100 text-red-700 hover:bg-red-200"
-                            : "bg-green-100 text-green-700 hover:bg-green-200"
-                        }`}
-                      >
-                        {product.isActive ? "Deactivate" : "Activate"}
-                      </button>
-                      <button
-                        onClick={() => handleEditProduct(product)}
-                        className="text-blue-600 hover:text-blue-900 text-xs"
-                      >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="bg-white rounded-lg shadow mt-4">
           <div className="px-6 py-3 border-t flex items-center justify-between">
             <div className="text-sm text-gray-700">
               Showing page {filters.page} of {totalPages}
@@ -438,8 +402,8 @@ export default function ProductsPage() {
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Modals */}
       <AddProductModal

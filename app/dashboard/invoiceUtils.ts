@@ -17,9 +17,30 @@ export function generateInvoicePDF(order: any) {
   doc.setFontSize(12);
   doc.setTextColor(0, 0, 0);
   doc.text(`Order ID: ${order._id || "N/A"}`, 14, 38);
-  doc.text(`Customer Number: ${order.customerNumber}`, 14, 46);
-  doc.text(`Flat Number: ${order.flatNumber}`, 14, 54);
-  doc.text(`Society: ${order.socityName}`, 14, 62);
+  doc.text(
+    `Customer Number: ${order.customer?.countryCode || "+91"}${
+      order.customer?.mobileNumber || order.customerNumber
+    }`,
+    14,
+    46
+  );
+  doc.text(
+    `Customer Name: ${
+      order.customer?.customerName || order.customerName || "N/A"
+    }`,
+    14,
+    54
+  );
+  doc.text(
+    `Flat Number: ${order.customer?.flatNumber || order.flatNumber}`,
+    14,
+    62
+  );
+  doc.text(
+    `Society: ${order.customer?.societyName || order.socityName}`,
+    14,
+    70
+  );
 
   // Table for items
   const itemRows = order.items.map((item: any, idx: number) => [
@@ -32,7 +53,7 @@ export function generateInvoicePDF(order: any) {
   autoTable(doc, {
     head: [["#", "Item", "Quantity", "Unit", "Price"]],
     body: itemRows,
-    startY: 70,
+    startY: 78, // Adjusted for additional customer name line
     theme: "striped",
     headStyles: {
       fillColor: [41, 128, 185],
@@ -70,20 +91,60 @@ export function generateInvoicePDF(order: any) {
 }
 
 export function getOrderSummaryText(order: any): string {
+  console.log("get orders", order);
   let summary = `**Shree Hari Mart – Order Summary**\n\n`;
-  summary += `Customer: ${order.customerNumber}\n`;
-  summary += `Society: ${order.socityName} ${
-    order.flatNumber ? order.flatNumber : ""
+
+  summary += `Delivery Date: ${order.deliveryDate}\n`;
+  summary += `Customer: ${
+    order.customer?.customerName || order.customerName || "N/A"
+  }\n`;
+  summary += `Mobile: ${order.customer?.countryCode || "+91"}${
+    order.customer?.mobileNumber || order.customerNumber
+  }\n`;
+  summary += `Society: ${order.customer?.societyName || order.socityName} ${
+    order.customer?.flatNumber || order.flatNumber
+      ? order.customer?.flatNumber || order.flatNumber
+      : ""
   }\n\n`;
   summary += `Items:\n`;
   order.items.forEach((item: any) => {
     summary += `• ${item.name} – ${item.quantity} ${item.unit} – ${item.price} RS\n`;
   });
   summary += `\nTotal Amount: ${order.totalAmount || 0} RS\n`;
-  // summary += `Discount: ${order.discount || 0} RS\n\n`;
-  summary += `**FINAL AMOUNT TO PAY: ${
-    order.finalAmount === 0 ? "FREE" : order.finalAmount + " RS"
+
+  // Add discount if applicable
+  if (order.discount && order.discount > 0) {
+    summary += `Discount: ${order.discount} RS\n`;
+  }
+
+  // Add wallet payment information if wallet was used
+  if (order.walletUsed && order.walletAmount > 0) {
+    summary += `\n💳 **WALLET PAYMENT:**\n`;
+    summary += `Amount Deducted from Wallet: ${order.walletAmount} RS\n`;
+
+    if (order.walletBalanceAfter !== undefined) {
+      summary += `Wallet Balance After Payment: ${order.walletBalanceAfter} RS\n`;
+    }
+
+    const remainingAmount = order.finalAmount || 0;
+    if (remainingAmount > 0) {
+      summary += `Remaining Amount to Pay: ${remainingAmount} RS\n`;
+    } else if (remainingAmount === 0) {
+      summary += `✅ **FULLY PAID FROM WALLET**\n`;
+    }
+  }
+
+  summary += `\n**FINAL AMOUNT TO PAY: ${
+    order.finalAmount === 0 ? "0 RS" : order.finalAmount + " RS"
   }**\n\n`;
+
+  // Add current wallet balance info if available
+  if (order.currentWalletBalance !== undefined) {
+    summary += `💰 Your current wallet balance: ${order.currentWalletBalance} RS\n\n`;
+  } else if (order.walletUsed && order.walletBalanceAfter !== undefined) {
+    summary += `💰 Your wallet balance after this order: ${order.walletBalanceAfter} RS\n\n`;
+  }
+
   summary += `Thank you for your order.\n\n**Shree Hari Mart**`;
   return summary;
 }

@@ -54,7 +54,7 @@ export default function SystemStatusPage() {
         productsCount: productsData.total || 0,
         categoriesCount: categoriesData.categories?.length || 0,
         ordersCount: ordersData.orders?.length || 0,
-        customersCount: customersData.customers?.length || 0,
+        customersCount: customersData.data?.length || 0,
         lowStockCount,
         migrationComplete: (productsData.total || 0) > 0,
       });

@@ -45,9 +45,11 @@ export async function GET(req: NextRequest) {
 
     const orders = await ordersCol.find(query).sort({ _id: -1 }).toArray();
 
-    // Attach items to each order
+    // Attach items to each order and add createdAt field
     for (const order of orders) {
       order.items = await orderItemsCol.find({ orderId: order._id }).toArray();
+      // Add createdAt field extracted from ObjectId timestamp
+      order.createdAt = order._id.getTimestamp();
     }
 
     // Calculate order statistics
