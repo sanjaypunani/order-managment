@@ -17,6 +17,7 @@ interface Customer {
   customerName: string;
   address: string;
   walletBalance?: number;
+  monthlyPaymentEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,6 +42,7 @@ export default function Customers() {
     societyName: "",
     customerName: "",
     address: "",
+    monthlyPaymentEnabled: false,
   });
 
   // Fetch customers
@@ -97,6 +99,7 @@ export default function Customers() {
           societyName: "",
           customerName: "",
           address: "",
+          monthlyPaymentEnabled: false,
         });
         fetchCustomers();
       } else {
@@ -118,6 +121,7 @@ export default function Customers() {
       societyName: customer.societyName,
       customerName: customer.customerName,
       address: customer.address,
+      monthlyPaymentEnabled: customer.monthlyPaymentEnabled || false,
     });
     setShowModal(true);
   };
@@ -142,6 +146,38 @@ export default function Customers() {
     } catch (error) {
       console.error("Error deleting customer:", error);
       alert("Error deleting customer");
+    }
+  };
+
+  // Toggle monthly payment
+  const toggleMonthlyPayment = async (customer: Customer) => {
+    const action = customer.monthlyPaymentEnabled ? "disable" : "enable";
+    if (
+      !confirm(
+        `Are you sure you want to ${action} monthly payment for ${customer.customerName}?`
+      )
+    )
+      return;
+
+    try {
+      const response = await fetch("/api/customers/monthly-payment", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: customer._id,
+          monthlyPaymentEnabled: !customer.monthlyPaymentEnabled,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        fetchCustomers(); // Refresh the list
+      } else {
+        alert(data.error || "Error updating monthly payment status");
+      }
+    } catch (error) {
+      console.error("Error updating monthly payment:", error);
+      alert("Error updating monthly payment status");
     }
   };
 
@@ -210,6 +246,23 @@ export default function Customers() {
       ),
     },
     {
+      key: "monthlyPaymentEnabled",
+      label: "Monthly Payment",
+      render: (value, customer) => (
+        <div className="flex items-center space-x-2">
+          <span
+            className={`px-2 py-1 rounded text-xs font-medium ${
+              value
+                ? "bg-green-100 text-green-800"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {value ? "Enabled" : "Disabled"}
+          </span>
+        </div>
+      ),
+    },
+    {
       key: "address",
       label: "Address",
       className: "text-sm text-gray-600",
@@ -241,6 +294,11 @@ export default function Customers() {
       disabled: () => loadingOrders,
     },
     {
+      label: "Toggle Monthly",
+      variant: "secondary",
+      onClick: (customer) => toggleMonthlyPayment(customer),
+    },
+    {
       label: "Delete",
       variant: "danger",
       onClick: (customer) => handleDelete(customer._id),
@@ -269,6 +327,7 @@ export default function Customers() {
               societyName: "",
               customerName: "",
               address: "",
+              monthlyPaymentEnabled: false,
             });
             setShowModal(true);
           }}
@@ -290,7 +349,7 @@ export default function Customers() {
       </div>
 
       {/* Customer Stats */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 lg:gap-6 xl:gap-8">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4 lg:gap-6 xl:gap-8">
         <div className="bg-blue-50 p-4 lg:p-6 xl:p-8 rounded shadow">
           <div className="text-lg lg:text-xl font-semibold">
             Total Customers
@@ -319,6 +378,14 @@ export default function Customers() {
           </div>
           <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-yellow-700">
             ₹{customers.reduce((sum, c) => sum + (c.walletBalance || 0), 0)}
+          </div>
+        </div>
+        <div className="bg-indigo-50 p-4 lg:p-6 xl:p-8 rounded shadow">
+          <div className="text-lg lg:text-xl font-semibold">
+            Monthly Payment Users
+          </div>
+          <div className="text-2xl lg:text-3xl xl:text-4xl font-bold text-indigo-700">
+            {customers.filter((c) => c.monthlyPaymentEnabled).length}
           </div>
         </div>
       </div>
@@ -424,6 +491,26 @@ export default function Customers() {
                   className="border rounded px-3 py-2 w-full"
                   placeholder="Enter full address (optional)"
                 />
+              </div>
+              <div className="mb-3">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    name="monthlyPaymentEnabled"
+                    checked={form.monthlyPaymentEnabled}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        monthlyPaymentEnabled: e.target.checked,
+                      })
+                    }
+                    className="rounded"
+                  />
+                  <span className="font-semibold">Enable Monthly Payment</span>
+                </label>
+                <p className="text-sm text-gray-600 mt-1">
+                  Orders will be marked as monthly payments when this is enabled
+                </p>
               </div>
               <div className="flex justify-end space-x-2 mt-4">
                 <button

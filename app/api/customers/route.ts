@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
       societyName,
       customerName,
       address,
+      monthlyPaymentEnabled,
     } = body;
 
     const customersCol = getCustomersCollection();
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
       address: address || "",
       walletBalance: 0,
       walletTransactions: [],
+      monthlyPaymentEnabled: monthlyPaymentEnabled || false,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -171,6 +173,7 @@ export async function PUT(req: NextRequest) {
       societyName,
       customerName,
       address,
+      monthlyPaymentEnabled,
     } = body;
 
     if (!customerId) throw new Error("customerId is required");
@@ -187,6 +190,7 @@ export async function PUT(req: NextRequest) {
           societyName,
           customerName,
           address,
+          monthlyPaymentEnabled: monthlyPaymentEnabled || false,
           updatedAt: new Date(),
         },
       }
