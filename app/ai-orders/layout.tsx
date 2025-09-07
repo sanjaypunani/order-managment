@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import MainLayout from "../components/MainLayout";
 
 export const metadata: Metadata = {
   title: "AI Orders - Shree Hari Mart",
@@ -10,5 +11,5 @@ export default function AIOrdersLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-screen bg-gray-50">{children}</div>;
+  return <MainLayout>{children}</MainLayout>;
 }

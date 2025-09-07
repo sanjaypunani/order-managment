@@ -47,6 +47,7 @@ export function useProducts() {
     price: product.price,
     unit: product.unit,
     quantity: product.quantity,
+    _id: product._id || "",
   }));
 
   return {

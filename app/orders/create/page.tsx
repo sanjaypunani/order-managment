@@ -16,10 +16,14 @@ function CreateEditOrderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editOrderId = searchParams.get("edit");
+  const aiOrderParam = searchParams.get("aiOrder");
 
   const customerSearch = useCustomerSearch();
   const orderForm = useOrderForm();
   const [searchQuery, setSearchQuery] = useState("");
+  const [aiOrderData, setAiOrderData] = useState<any>(null);
+  const [showAiOrderInfo, setShowAiOrderInfo] = useState(false);
+  const [aiOrderLoaded, setAIOrderLoaded] = useState(false);
 
   // Fetch products
   const {
@@ -88,6 +92,98 @@ function CreateEditOrderContent() {
 
     loadOrderForEdit();
   }, [editOrderId]);
+
+  // Load AI order data when aiOrder parameter is present
+  useEffect(() => {
+    const loadAiOrderData = async () => {
+      if (aiOrderParam) {
+        try {
+          const decodedAiOrder = JSON.parse(decodeURIComponent(aiOrderParam));
+          console.log("decodedAiOrder", decodedAiOrder);
+          // Validate AI order structure
+          if (!decodedAiOrder || typeof decodedAiOrder !== "object") {
+            throw new Error("Invalid AI order data structure");
+          }
+
+          setAiOrderData(decodedAiOrder);
+          setShowAiOrderInfo(true);
+
+          // Prefill the form with AI order data
+          // Set customer information with validation
+          if (decodedAiOrder.customer_phone) {
+            orderForm.updateField(
+              "customerNumber",
+              decodedAiOrder.customer_phone
+            );
+          }
+
+          if (decodedAiOrder.customer_id) {
+            orderForm.updateField("customerName", decodedAiOrder.customer_id);
+            setSearchQuery(
+              `${decodedAiOrder.customer_id} - ${
+                decodedAiOrder.customer_phone || ""
+              }`
+            );
+          } else if (decodedAiOrder.customer_phone) {
+            setSearchQuery(`Customer - ${decodedAiOrder.customer_phone}`);
+          }
+
+          // Clear existing items and populate with AI order items
+          if (
+            decodedAiOrder.items &&
+            Array.isArray(decodedAiOrder.items) &&
+            decodedAiOrder.items.length > 0
+          ) {
+            // First, reset the form items to have one empty item
+            while (orderForm.form.items.length > 1) {
+              orderForm.removeItem(orderForm.form.items.length - 1);
+            }
+
+            // Populate items from AI order with validation
+            decodedAiOrder.items.forEach((aiItem: any, index: number) => {
+              const mainProduct = products.find(
+                (product: any) => product?._id === aiItem.product_id
+              );
+              console.log("mainProduct", mainProduct);
+              if (mainProduct) {
+                handleAddToOrder(mainProduct, aiItem.quantity, aiItem.unit);
+                // orderForm.addNewItem(mainProduct, aiItem.quantity, aiItem.unit);
+              }
+            });
+          }
+
+          // Try to find and select the customer
+          if (decodedAiOrder.customer_phone) {
+            const cleanPhone = decodedAiOrder.customer_phone
+              .toString()
+              .replace(/^\+91/, "")
+              .replace(/^91/, "");
+            if (cleanPhone.length >= 10) {
+              try {
+                await customerSearch.searchByMobile(cleanPhone);
+              } catch (error) {
+                console.log(
+                  "Customer not found, but form is prefilled with AI data"
+                );
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to parse AI order data:", error);
+          // Show user-friendly error
+          orderForm.setError(
+            "Failed to load AI order data. Please try again or create the order manually."
+          );
+          setShowAiOrderInfo(false);
+        }
+      }
+    };
+    if (products.length && !aiOrderLoaded) {
+      setAIOrderLoaded(true);
+      loadAiOrderData();
+    }
+    console.log("products", products);
+  }, [aiOrderParam, products, aiOrderLoaded, setAIOrderLoaded]);
 
   const handleCustomerSelect = (customer: Customer) => {
     customerSearch.selectCustomer(customer);
@@ -180,6 +276,17 @@ function CreateEditOrderContent() {
         }
       }
 
+      if (aiOrderData && aiOrderData._id) {
+        // If the order was created from an AI order, mark it as accepted
+        await fetch(`/api/ai-orders/${aiOrderData._id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ verification_status: "verified" }),
+        });
+      }
+
       // Navigate back to orders page
       router.push("/orders");
     } catch {
@@ -198,16 +305,17 @@ function CreateEditOrderContent() {
     customQuantity?: number,
     customUnit?: string
   ) => {
+    // console.log("comme to adding product", product);
     const quantity = customQuantity || product.quantity || 1;
-    const unit = customUnit || product.unit;
+    const unit = (customUnit || product.unit).toLocaleUpperCase();
 
     // Calculate price based on unit conversion
     let price = product.price;
     if (product.unit !== unit) {
-      if (product.unit === "GM" && unit === "KG") {
+      if (product.unit.toLocaleUpperCase() === "GM" && unit === "KG") {
         // Convert from GM to KG: multiply quantity by 1000 to get GM equivalent
         price = (product.price / product.quantity) * (quantity * 1000);
-      } else if (product.unit === "KG" && unit === "GM") {
+      } else if (product.unit.toLocaleUpperCase() === "KG" && unit === "GM") {
         // Convert from KG to GM: divide quantity by 1000 to get KG equivalent
         price = (product.price / (product.quantity * 1000)) * quantity;
       } else {
@@ -220,6 +328,7 @@ function CreateEditOrderContent() {
     }
 
     price = Math.round(price); // Round to nearest rupee
+    console.log("final price of product");
 
     // Check if product already exists in the order (only check items with names)
     const existingItemIndex = orderForm.form.items.findIndex(
@@ -236,36 +345,33 @@ function CreateEditOrderContent() {
       orderForm.updateItem(existingItemIndex, "price", newPrice);
       orderForm.updateItem(existingItemIndex, "unit", unit);
     } else {
+      orderForm.addNewItem({
+        name: product.name,
+        unit,
+        quantity,
+        price,
+      });
       // Product doesn't exist, find an empty slot or add new item
       const emptyItemIndex = orderForm.form.items.findIndex(
         (item) => !item.name || item.name === ""
       );
 
-      if (emptyItemIndex !== -1) {
-        // Fill the empty slot
-        orderForm.updateItem(emptyItemIndex, "name", product.name);
-        orderForm.updateItem(emptyItemIndex, "unit", unit);
-        orderForm.updateItem(emptyItemIndex, "quantity", quantity);
-        orderForm.updateItem(emptyItemIndex, "price", price);
-      } else {
-        orderForm.addNewItem({
-          name: product.name,
-          unit,
-          quantity,
-          price,
-        });
-        // Add a new item using addItem and then immediately populate it
-        // orderForm.addItem();
-
-        // // Use requestAnimationFrame to ensure the item is added before updating
-        // requestAnimationFrame(() => {
-        //   const newIndex = orderForm.form.items.length - 1;
-        //   orderForm.updateItem(newIndex, "name", product.name);
-        //   orderForm.updateItem(newIndex, "unit", unit);
-        //   orderForm.updateItem(newIndex, "quantity", quantity);
-        //   orderForm.updateItem(newIndex, "price", price);
-        // });
-      }
+      // if (emptyItemIndex !== -1) {
+      //   console.log("filling empty slot", product.name);
+      //   // Fill the empty slot
+      //   orderForm.updateItem(emptyItemIndex, "name", product.name);
+      //   orderForm.updateItem(emptyItemIndex, "unit", unit);
+      //   orderForm.updateItem(emptyItemIndex, "quantity", quantity);
+      //   orderForm.updateItem(emptyItemIndex, "price", price);
+      // } else {
+      //   console.log("call add new items", product.name);
+      //   orderForm.addNewItem({
+      //     name: product.name,
+      //     unit,
+      //     quantity,
+      //     price,
+      //   });
+      // }
     }
   };
 
@@ -387,6 +493,204 @@ function CreateEditOrderContent() {
         {orderForm.error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
             {orderForm.error}
+          </div>
+        )}
+
+        {/* AI Order Information Section */}
+        {showAiOrderInfo && aiOrderData && (
+          <div className="mb-8 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-sm p-6 border border-purple-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-2xl">🤖</span>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  AI Order Information
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAiOrderInfo(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+              >
+                ✕ Hide
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* AI Confidence and Status */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    AI Analysis
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        Confidence Level:
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-24 h-2 bg-gray-200 rounded-full">
+                          <div
+                            className={`h-2 rounded-full ${
+                              (aiOrderData.ai_confidence || 0) >= 0.8
+                                ? "bg-green-500"
+                                : (aiOrderData.ai_confidence || 0) >= 0.6
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                            }`}
+                            style={{
+                              width: `${
+                                (aiOrderData.ai_confidence || 0) * 100
+                              }%`,
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium">
+                          {Math.round((aiOrderData.ai_confidence || 0) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Status:</span>
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          aiOrderData.verification_status === "verified"
+                            ? "bg-green-100 text-green-800"
+                            : aiOrderData.verification_status === "pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : aiOrderData.verification_status ===
+                              "needs_clarification"
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {(aiOrderData.verification_status || "unknown")
+                          .replace("_", " ")
+                          .toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        Estimated Total:
+                      </span>
+                      <span className="text-sm font-medium">
+                        ₹{(aiOrderData.estimated_total || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {aiOrderData.notes && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">
+                      📝 AI Notes
+                    </h3>
+                    <div className="bg-white p-3 rounded border text-sm text-gray-600">
+                      {aiOrderData.notes}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Unrecognized Products and Customer Messages */}
+              <div className="space-y-4">
+                {/* Unrecognized Products */}
+                {aiOrderData.unrecognized_products &&
+                  aiOrderData.unrecognized_products.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700 mb-2">
+                        ⚠️ Unrecognized Products
+                      </h3>
+                      <div className="bg-yellow-50 border border-yellow-200 p-3 rounded">
+                        <ul className="space-y-1">
+                          {aiOrderData.unrecognized_products.map(
+                            (product: string, index: number) => (
+                              <li
+                                key={index}
+                                className="text-sm text-yellow-800 flex items-center space-x-2"
+                              >
+                                <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                                <span>{product}</span>
+                              </li>
+                            )
+                          )}
+                        </ul>
+                        <p className="text-xs text-yellow-700 mt-2">
+                          These products were mentioned but couldn't be matched
+                          to your inventory.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                {/* Customer Messages */}
+                {aiOrderData.customer_messages &&
+                  aiOrderData.customer_messages.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700 mb-2">
+                        💬 Customer Messages (
+                        {aiOrderData.customer_messages.length})
+                      </h3>
+                      <div className="bg-blue-50 border border-blue-200 p-3 rounded max-h-32 overflow-y-auto">
+                        <div className="space-y-2">
+                          {aiOrderData.customer_messages
+                            .slice(0, 3)
+                            .map((message: any, index: number) => (
+                              <div key={index} className="text-sm">
+                                <div className="flex items-center justify-between">
+                                  <span
+                                    className={`px-2 py-1 text-xs rounded ${
+                                      message.message_type === "order"
+                                        ? "bg-green-100 text-green-700"
+                                        : message.message_type ===
+                                          "clarification"
+                                        ? "bg-orange-100 text-orange-700"
+                                        : "bg-gray-100 text-gray-700"
+                                    }`}
+                                  >
+                                    {message.message_type}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(
+                                      message.timestamp
+                                    ).toLocaleTimeString()}
+                                  </span>
+                                </div>
+                                <p className="text-blue-800 mt-1">
+                                  {message.message_text}
+                                </p>
+                              </div>
+                            ))}
+                          {aiOrderData.customer_messages.length > 3 && (
+                            <p className="text-xs text-blue-600 italic">
+                              ...and {aiOrderData.customer_messages.length - 3}{" "}
+                              more messages
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+              </div>
+            </div>
+
+            {/* Order Timeline */}
+            <div className="mt-4 pt-4 border-t border-purple-200">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>
+                  📅 Order Date:{" "}
+                  {aiOrderData.order_date
+                    ? new Date(aiOrderData.order_date).toLocaleDateString()
+                    : "N/A"}
+                </span>
+                <span>
+                  🔄 Last Updated:{" "}
+                  {aiOrderData.last_updated
+                    ? new Date(aiOrderData.last_updated).toLocaleString()
+                    : "N/A"}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 

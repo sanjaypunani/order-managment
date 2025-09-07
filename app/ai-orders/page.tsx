@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AIOrder, AIOrderResponse } from "../../lib/types/aiOrder";
 
 const AIOrdersPage = () => {
+  const router = useRouter();
   const [orders, setOrders] = useState<AIOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,12 @@ const AIOrdersPage = () => {
   useEffect(() => {
     fetchOrders();
   }, [filters]);
+
+  const handleCreateOrder = (aiOrder: AIOrder) => {
+    // Encode the AI order data as URL parameters
+    const aiOrderData = encodeURIComponent(JSON.stringify(aiOrder));
+    router.push(`/orders/create?aiOrder=${aiOrderData}`);
+  };
 
   const handleFilterChange = (key: string, value: string | number) => {
     setFilters((prev) => ({
@@ -209,6 +217,9 @@ const AIOrdersPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -291,6 +302,22 @@ const AIOrdersPage = () => {
                     </div>
                     <div className="text-xs text-gray-500">
                       Updated: {formatDate(order.last_updated)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleCreateOrder(order)}
+                        className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      >
+                        Create Order
+                      </button>
+                      <button
+                        // onClick={() => handleViewDetails(order)}
+                        className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                      >
+                        View Details
+                      </button>
                     </div>
                   </td>
                 </tr>
