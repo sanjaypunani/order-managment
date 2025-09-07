@@ -51,7 +51,20 @@ export async function POST(req: NextRequest) {
       if (customer) {
         finalCustomerId = customer._id;
       } else {
-        throw new Error("Customer not found. Please create customer first.");
+        const result = await customersCol.insertOne({
+          countryCode: "+91",
+          mobileNumber,
+          flatNumber,
+          societyName: socityName,
+          customerName: customerName || "",
+          address: "",
+          walletBalance: 0,
+          walletTransactions: [],
+          monthlyPaymentEnabled: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        finalCustomerId = result.insertedId;
       }
     }
 

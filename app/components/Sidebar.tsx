@@ -22,6 +22,11 @@ export default function Sidebar({ className = "" }: SidebarProps) {
       icon: "📋",
     },
     {
+      label: "AI Orders",
+      href: "/ai-orders",
+      icon: "🤖",
+    },
+    {
       label: "Customers",
       href: "/customers",
       icon: "👥",
