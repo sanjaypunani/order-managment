@@ -6,9 +6,18 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed:customers": "npx tsx scripts/seedCustomers.ts",
+    "migrate:wallet": "npx tsx scripts/migrateWalletTransactions.ts",
+    "migrate:normalize": "npx tsx scripts/migrateOrderCustomerNormalization.ts",
+    "migrate:fix-special": "npx tsx scripts/fixSpecialCaseOrders.ts",
+    "migrate:cleanup": "npx tsx scripts/cleanupOrderCustomerFields.ts cleanup",
+    "migrate:rollback": "npx tsx scripts/cleanupOrderCustomerFields.ts rollback",
+    "test:wallet": "npx tsx scripts/testWalletRefactor.ts"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "dotenv": "^17.2.1",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "mongodb": "^6.18.0",
@@ -17,14 +26,20 @@
     "pg-hstore": "^2.3.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "sequelize": "^6.37.7"
+    "sequelize": "^6.37.7",
+    "tailwind-merge": "^3.3.1",
+    "tls": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "9.33.0",
+    "eslint-config-next": "15.4.6",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
     "typescript": "^5"
   }
 }
